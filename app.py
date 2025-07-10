@@ -4,7 +4,7 @@ import os
 
 from utils.youtube_utils import get_video_id, search_videos_with_transcript
 from utils.transcript_utils import has_english_transcript, fetch_transcript, format_timestamps
-from utils.gemini_utils import configure_gemini, generate_timestamps, answer_question
+from utils.gemini_utils import configure_gemini, generate_timestamps, answer_question, build_faiss_index
 
 # === Load API Key ===
 load_dotenv()
@@ -33,7 +33,11 @@ if st.session_state.get("video_list"):
         st.session_state.selected_video_label = selected
         st.session_state.video = st.session_state.video_data[selected]
         st.session_state.transcript_chunks = fetch_transcript(st.session_state.video["video_id"])
+        st.session_state.index, st.session_state.chunk_list, st.session_state.embeddings = build_faiss_index(
+            st.session_state.transcript_chunks
+        )
         st.session_state.timestamps = None
+
 
 # === Show Video and Interaction ===
 if "video" in st.session_state and st.session_state.get("transcript_chunks"):
@@ -52,5 +56,10 @@ if "video" in st.session_state and st.session_state.get("transcript_chunks"):
 
     if user_q:
         with st.spinner("💬 Thinking..."):
-            answer = answer_question(st.session_state.transcript_chunks, user_q)
+            answer = answer_question(
+                st.session_state.transcript_chunks,
+                user_q,
+                index=st.session_state.index,
+                chunks=st.session_state.chunk_list
+            )
             st.markdown(f"**Answer:** {answer}")
